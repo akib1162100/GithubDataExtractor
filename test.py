@@ -1,1 +1,3 @@
-testing addition
+import git
+
+repo =git.Repo("analytics/")
