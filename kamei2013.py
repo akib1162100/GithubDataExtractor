@@ -5,7 +5,7 @@ import pydriller as pyd
 
 
 def diffusion_metrics_extraction(commit_list):
-    list_to_return = []
+    diffusion_list_to_return = []
     for commit in commit_list:
         commit_dict = commit.stats.files
         ns = 0
@@ -37,13 +37,13 @@ def diffusion_metrics_extraction(commit_list):
             entropy = -file_bias* math.log(file_bias,2) + entropy
 
         diffusion_metrics_dictionary = {'ns': ns,'nd': nd, 'nf': nf, 'entropy': entropy}
-        list_to_return.append({'commit': commit.hexsha, 'diffusion_metrics': diffusion_metrics_dictionary})
+        diffusion_list_to_return.append({'commit': commit.hexsha, 'diffusion_metrics': diffusion_metrics_dictionary})
 
-    return list_to_return
+    return diffusion_list_to_return
 
 
 def size_metrics_extraction(commit_list):
-    list_to_return=[]
+    size_list_to_return=[]
     list_of_files_name = []
     file_line_dict = {}
     commits_list = []
@@ -86,7 +86,7 @@ def size_metrics_extraction(commit_list):
             la = 0
             ld = 0
             size_metrics_dict={'lt': lt,'la': la,'ld':ld}
-            list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
+            size_list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
         else:
             lt_dict=unmodded_file_line_dict[i-1]
             for key, value in lt_dict.items():
@@ -96,22 +96,39 @@ def size_metrics_extraction(commit_list):
                 la = 0
                 ld = 0
                 size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
-                list_to_return.append({'commit': commit, 'size_metrics': size_metrics_dict})
+                size_list_to_return.append({'commit': commit, 'size_metrics': size_metrics_dict})
             else:
                 la = la/lt
                 ld = ld/lt
                 size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
-                list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
+                size_list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
 
 
-    return list_to_return
+    return size_list_to_return
+
+def purpose_metrics_extraction(commit_list):
+    purpose_list_to_return = []
+    purpose = 0
+    for commit in commit_list:
+        if 'bug' in commit.message or 'defect' in commit.message or 'fix' in commit.message or 'patch' in commit.message :
+            purpose = 1
+        purpose_metrics_dict = {'commit': commit.hexsha,'purpose':purpose}
+        purpose_list_to_return.append(purpose_metrics_dict)
+    return purpose_list_to_return
+
+def main():
+    repository_name = "GithubDataExtractor/"
+    repo = git.Repo(repository_name)
+    commit_list = list(repo.iter_commits())
+    commit_list = reversed(commit_list)
+    diffusion_metrics = diffusion_metrics_extraction(commit_list)
+    size_metrics = size_metrics_extraction(commit_list)
+    purpose_metrics= purpose_metrics_extraction(commit_list)
+    print(diffusion_metrics)
+    print(size_metrics)
+    print(purpose_metrics)
 
 
-
-repository_name = "GithubDataExtractor/"
-repo = git.Repo(repository_name)
-commit_list = list(repo.iter_commits())
-length = len(commit_list)
-commit_list = reversed(commit_list)
-# print(diffusion_metrics_extraction(commit_list))
-print(size_metrics_extraction(commit_list))
+if __name__ == "__main__":
+    main()
+# TODO : history and experiance metrics and integration
