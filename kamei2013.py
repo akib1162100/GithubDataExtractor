@@ -1,9 +1,7 @@
 import git
 import math
 from copy import deepcopy
-from datetime import date
-from pydriller.metrics.process.contributors_count import ContributorsCount
-import pydriller as pyd
+from dateutil.relativedelta import relativedelta
 
 
 def diffusion_metrics_extraction(commit_list):
@@ -121,7 +119,6 @@ def purpose_metrics_extraction(commit_list):
 
 
 def file_related_information(commit_list):
-    file_touched_list = []
     file_name_list = []
     for commit in commit_list:
         for key, details in commit.stats.files.items():
@@ -129,7 +126,6 @@ def file_related_information(commit_list):
     file_name_list = list(set(file_name_list))
     file_touched_dict_list = []
     file_touched_commit_list = []
-
     this_commit_ndev = []
     for file in file_name_list:
         committer_list = []
@@ -145,11 +141,7 @@ def file_related_information(commit_list):
 
         file_touched_dict_list.append({'file': file, 'committer_name': committer_list})
         file_touched_commit_list.append({'file': file, 'commit': commits_list})
-        # file_last_commit_dict.append({'file': file, 'commit': commits_list[-1]})
-        # file_age_dict.append({'file': file, 'last_commit_age': (date.today()-commits_list[-1].committed_datetime.date()).days})
 
-    # print(file_touched_dict_list)
-    # print(file_touched_commit_list)
     return (file_touched_dict_list , file_touched_commit_list)
     # print(file_last_commit_dict)
     # print(file_age_dict)
@@ -161,8 +153,8 @@ def history_dimention_metrics_extraction (commit_list):
         ndev_list = []
         nuc_list = []
         age = 0
-        prev_commitlist=commit_list[ :i]
-        file_touched_dict_list, file_touched_commit_list=file_related_information(prev_commitlist)
+        prev_commitlist = commit_list[ :i]
+        file_touched_dict_list, file_touched_commit_list = file_related_information(prev_commitlist)
         commit = commit_list[i]
         this_files = []
         for key in commit.stats.files:
@@ -173,17 +165,71 @@ def history_dimention_metrics_extraction (commit_list):
                 ndev_list.extend(this_dict['committer_name'])
         for this_commit_dict in file_touched_commit_list:
             if this_commit_dict['file'] in this_files:
-                age =age+ (commit.committed_datetime.date()-this_commit_dict['commit'][-1].committed_datetime.date()).days
+                age =age + (commit.committed_datetime.date()-this_commit_dict['commit'][-1].committed_datetime.date()).days
                 for commit in this_commit_dict['commit']:
                     nuc_list.append(commit.hexsha)
         age = age/len(this_files)
         ndev = len(list(set(ndev_list)))
         nuc = len(list(set(nuc_list)))
-        # print(age)
-        # print(len(list(set(ndev_list))))
-        # print(len(list(set(nuc_list))))
         list_to_return.append({'commit':commit.hexsha, 'age':age ,'ndev':ndev,'nuc':nuc})
     return list_to_return
+
+
+def experiance_metrics_extraction(commit_list):
+    list_to_return = []
+    for i in range(len(commit_list)):
+        devs_exp = {}
+        devs_list = []
+        devs_rexp_list = []
+        prev_commit_list = commit_list[:i+1]
+        number_of_years = relativedelta(commit_list[i].committed_datetime, prev_commit_list[0].committed_datetime).years
+        for commit in prev_commit_list:
+            devs_list.append(commit.committer.name)
+        for j in range(number_of_years+1):
+            committer_list = []
+            for commit in prev_commit_list:
+                committer_list.append(commit.committer.name)
+            devs_rexp_list.append(j)
+            devs_rexp_list.append(committer_list)
+        devs_exp = {i: devs_list.count(i) for i in devs_list}
+        # print(devs_exp)
+        file_touched_dict_list, file_touched_commit_list = file_related_information(prev_commit_list)
+        subsystem_dev_list = []
+        sub_dict_list=[]
+        sub_sys_name_set = set()
+        for file_info in file_touched_dict_list:
+            if len(file_info['file'].split('/')) >= 2:
+                subsystem_dev_list = file_info['committer_name']
+                sub_dict_list.append({'sub_sys':file_info['file'].split('/')[0],'subsys_devs':subsystem_dev_list})
+                sub_sys_name_set.add(file_info['file'].split('/')[0])
+        aggrigated_sub_dict_list = []
+        for subsysname in sub_sys_name_set:
+            aggrigated_dev_list = []
+            for dictionary in sub_dict_list:
+                if dictionary['sub_sys'] == subsysname:
+                    aggrigated_dev_list.extend(dictionary['subsys_devs'])
+            aggrigated_sub_dict_list.append({'sub_sys': subsysname, 'devs': aggrigated_dev_list})
+
+
+        exp = 0
+        rexp = 0
+        sexp = 0
+        subsysname = None
+        for key in commit_list[i].stats.files:
+            if len(key.split('/')) >=2:
+                subsysname = key.split('/')[0]
+                for dictionary in aggrigated_sub_dict_list:
+                    if dictionary['sub_sys'] == subsysname:
+                        sexp = sexp + dictionary['devs'].count(commit_list[i].committer.name)
+
+        for i in range(int(len(devs_rexp_list)/2)):
+            j = (i*2)
+            rexp = rexp + devs_rexp_list[j+1].count(commit_list[i].committer.name)/(devs_rexp_list[j]+1)
+
+        exp = devs_exp[str(commit_list[i].committer.name)]
+        list_to_return.append({'commit': commit_list[i].hexsha, 'exp': exp, 'rexp': rexp, 'sexp': sexp})
+    return list_to_return
+
 
 
 
@@ -197,10 +243,12 @@ def main():
     size_metrics = size_metrics_extraction(commit_list)
     purpose_metrics = purpose_metrics_extraction(commit_list)
     history=history_dimention_metrics_extraction(commit_list)
+    exp =experiance_metrics_extraction(commit_list)
+    print(exp)
     print(history)
-    # print(diffusion_metrics)
-    # print(size_metrics)
-    # print(purpose_metrics)
+    print(diffusion_metrics)
+    print(size_metrics)
+    print(purpose_metrics)
 
 
 
