@@ -1,6 +1,8 @@
 import git
 import math
 from copy import deepcopy
+from datetime import date
+from pydriller.metrics.process.contributors_count import ContributorsCount
 import pydriller as pyd
 
 
@@ -48,14 +50,14 @@ def size_metrics_extraction(commit_list):
     file_line_dict = {}
     commits_list = []
     unmodded_file_line_dict = []
-    for commit in commit_list:
-        commits_list.append(commit)
+    # for commit in commit_list:
+    #     commits_list.append(commit)
 
-    for i in range(len(commits_list)):
+    for i in range(len(commit_list)):
         lt = 0
         la = 0
         ld = 0
-        commit=commits_list[i]
+        commit=commit_list[i]
         this_file_line_dict = {}
         commit_dict = commit.stats.files
         all_line_modded = 0
@@ -63,16 +65,16 @@ def size_metrics_extraction(commit_list):
 
         for keys, details in commit_dict.items():
             keys = str(keys)
-            incertions = details['insertions']
-            la = la + incertions
+            insertions = details['insertions']
+            la = la + insertions
             deletions = details['deletions']
             ld = ld + deletions
             change_in_files.append(details['lines'])
             all_line_modded = all_line_modded + details['lines']
             modified_changes = keys.split("/")
             if list_of_files_name.count(modified_changes[-1]) != 0:
-                file_line_dict[modified_changes[-1]] = file_line_dict[modified_changes[-1]]+ incertions-deletions
-                this_file_line_dict[modified_changes[-1]] = file_line_dict[modified_changes[-1]]+ incertions- deletions
+                file_line_dict[modified_changes[-1]] = file_line_dict[modified_changes[-1]]+ insertions-deletions
+                this_file_line_dict[modified_changes[-1]] = file_line_dict[modified_changes[-1]]+ insertions- deletions
             else:
                 list_of_files_name.append(modified_changes[-1])
                 file_line_dict[modified_changes[-1]] = details['lines']
@@ -92,7 +94,7 @@ def size_metrics_extraction(commit_list):
             for key, value in lt_dict.items():
                 if key in this_file_line_dict:
                     lt = lt + value
-            if lt ==0:
+            if lt == 0:
                 la = 0
                 ld = 0
                 size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
@@ -116,17 +118,90 @@ def purpose_metrics_extraction(commit_list):
         purpose_list_to_return.append(purpose_metrics_dict)
     return purpose_list_to_return
 
+
+
+def file_related_information(commit_list):
+    file_touched_list = []
+    file_name_list = []
+    for commit in commit_list:
+        for key, details in commit.stats.files.items():
+            file_name_list.append(key)
+    file_name_list = list(set(file_name_list))
+    file_touched_dict_list = []
+    file_touched_commit_list = []
+
+    this_commit_ndev = []
+    for file in file_name_list:
+        committer_list = []
+        commits_list = []
+        for commits in commit_list:
+            this_commit_ndev.extend(committer_list)
+            for key in commits.stats.files:
+                if file == key:
+                    committer_list.append(commits.committer.name)
+                    commits_list.append(commits)
+
+        commits_list.sort(key=lambda x: x.committed_datetime,reverse=False)
+
+        file_touched_dict_list.append({'file': file, 'committer_name': committer_list})
+        file_touched_commit_list.append({'file': file, 'commit': commits_list})
+        # file_last_commit_dict.append({'file': file, 'commit': commits_list[-1]})
+        # file_age_dict.append({'file': file, 'last_commit_age': (date.today()-commits_list[-1].committed_datetime.date()).days})
+
+    # print(file_touched_dict_list)
+    # print(file_touched_commit_list)
+    return (file_touched_dict_list , file_touched_commit_list)
+    # print(file_last_commit_dict)
+    # print(file_age_dict)
+
+
+def history_dimention_metrics_extraction (commit_list):
+    list_to_return= []
+    for i in range(len(commit_list)):
+        ndev_list = []
+        nuc_list = []
+        age = 0
+        prev_commitlist=commit_list[ :i]
+        file_touched_dict_list, file_touched_commit_list=file_related_information(prev_commitlist)
+        commit = commit_list[i]
+        this_files = []
+        for key in commit.stats.files:
+            this_files.append(key)
+
+        for this_dict in  file_touched_dict_list:
+            if this_dict['file'] in this_files:
+                ndev_list.extend(this_dict['committer_name'])
+        for this_commit_dict in file_touched_commit_list:
+            if this_commit_dict['file'] in this_files:
+                age =age+ (commit.committed_datetime.date()-this_commit_dict['commit'][-1].committed_datetime.date()).days
+                for commit in this_commit_dict['commit']:
+                    nuc_list.append(commit.hexsha)
+        age = age/len(this_files)
+        ndev = len(list(set(ndev_list)))
+        nuc = len(list(set(nuc_list)))
+        # print(age)
+        # print(len(list(set(ndev_list))))
+        # print(len(list(set(nuc_list))))
+        list_to_return.append({'commit':commit.hexsha, 'age':age ,'ndev':ndev,'nuc':nuc})
+    return list_to_return
+
+
+
+
 def main():
     repository_name = "GithubDataExtractor/"
     repo = git.Repo(repository_name)
     commit_list = list(repo.iter_commits())
-    commit_list = reversed(commit_list)
+    commit_list.sort(key=lambda x: x.committed_datetime, reverse=False)
     diffusion_metrics = diffusion_metrics_extraction(commit_list)
     size_metrics = size_metrics_extraction(commit_list)
-    purpose_metrics= purpose_metrics_extraction(commit_list)
-    print(diffusion_metrics)
-    print(size_metrics)
-    print(purpose_metrics)
+    purpose_metrics = purpose_metrics_extraction(commit_list)
+    history=history_dimention_metrics_extraction(commit_list)
+    print(history)
+    # print(diffusion_metrics)
+    # print(size_metrics)
+    # print(purpose_metrics)
+
 
 
 if __name__ == "__main__":
