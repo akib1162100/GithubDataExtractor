@@ -36,8 +36,8 @@ def diffusion_metrics_extraction(commit_list):
             file_bias =(change_count/all_line_modded)
             entropy = -file_bias* math.log(file_bias,2) + entropy
 
-        diffusion_metrics_dictionary = {'ns': ns,'nd': nd, 'nf': nf, 'entropy': entropy}
-        diffusion_list_to_return.append({'commit': commit.hexsha, 'diffusion_metrics': diffusion_metrics_dictionary})
+        # diffusion_metrics_dictionary = {'ns': ns,'nd': nd, 'nf': nf, 'entropy': entropy}
+        diffusion_list_to_return.append({'commit': commit.hexsha, 'ns': ns,'nd': nd, 'nf': nf, 'entropy': entropy})
 
     return diffusion_list_to_return
 
@@ -46,10 +46,7 @@ def size_metrics_extraction(commit_list):
     size_list_to_return=[]
     list_of_files_name = []
     file_line_dict = {}
-    commits_list = []
     unmodded_file_line_dict = []
-    # for commit in commit_list:
-    #     commits_list.append(commit)
 
     for i in range(len(commit_list)):
         lt = 0
@@ -85,8 +82,8 @@ def size_metrics_extraction(commit_list):
             lt = 0
             la = 0
             ld = 0
-            size_metrics_dict={'lt': lt,'la': la,'ld':ld}
-            size_list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
+            # size_metrics_dict={'lt': lt,'la': la,'ld':ld}
+            size_list_to_return.append({'commit': commit.hexsha,'lt': lt,'la': la,'ld':ld})
         else:
             lt_dict=unmodded_file_line_dict[i-1]
             for key, value in lt_dict.items():
@@ -95,13 +92,13 @@ def size_metrics_extraction(commit_list):
             if lt == 0:
                 la = 0
                 ld = 0
-                size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
-                size_list_to_return.append({'commit': commit, 'size_metrics': size_metrics_dict})
+                # size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
+                size_list_to_return.append({'commit': commit.hexsha, 'lt': lt, 'la': la, 'ld': ld})
             else:
                 la = la/lt
                 ld = ld/lt
-                size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
-                size_list_to_return.append({'commit': commit,'size_metrics':size_metrics_dict})
+                # size_metrics_dict = {'lt': lt, 'la': la, 'ld': ld}
+                size_list_to_return.append({'commit': commit.hexsha,'lt': lt, 'la': la, 'ld': ld})
 
 
     return size_list_to_return
@@ -137,18 +134,16 @@ def file_related_information(commit_list):
                     committer_list.append(commits.committer.name)
                     commits_list.append(commits)
 
-        commits_list.sort(key=lambda x: x.committed_datetime,reverse=False)
+        commits_list.sort(key=lambda x: x.committed_datetime, reverse=False)
 
         file_touched_dict_list.append({'file': file, 'committer_name': committer_list})
         file_touched_commit_list.append({'file': file, 'commit': commits_list})
 
     return (file_touched_dict_list , file_touched_commit_list)
-    # print(file_last_commit_dict)
-    # print(file_age_dict)
 
 
-def history_dimention_metrics_extraction (commit_list):
-    list_to_return= []
+def history_dimention_metrics_extraction(commit_list):
+    list_to_return = []
     for i in range(len(commit_list)):
         ndev_list = []
         nuc_list = []
@@ -160,7 +155,7 @@ def history_dimention_metrics_extraction (commit_list):
         for key in commit.stats.files:
             this_files.append(key)
 
-        for this_dict in  file_touched_dict_list:
+        for this_dict in file_touched_dict_list:
             if this_dict['file'] in this_files:
                 ndev_list.extend(this_dict['committer_name'])
         for this_commit_dict in file_touched_commit_list:
@@ -171,7 +166,7 @@ def history_dimention_metrics_extraction (commit_list):
         age = age/len(this_files)
         ndev = len(list(set(ndev_list)))
         nuc = len(list(set(nuc_list)))
-        list_to_return.append({'commit':commit.hexsha, 'age':age ,'ndev':ndev,'nuc':nuc})
+        list_to_return.append({'commit': commit.hexsha, 'age':age ,'ndev':ndev,'nuc':nuc})
     return list_to_return
 
 
@@ -192,7 +187,6 @@ def experiance_metrics_extraction(commit_list):
             devs_rexp_list.append(j)
             devs_rexp_list.append(committer_list)
         devs_exp = {i: devs_list.count(i) for i in devs_list}
-        # print(devs_exp)
         file_touched_dict_list, file_touched_commit_list = file_related_information(prev_commit_list)
         subsystem_dev_list = []
         sub_dict_list=[]
@@ -242,14 +236,19 @@ def main():
     diffusion_metrics = diffusion_metrics_extraction(commit_list)
     size_metrics = size_metrics_extraction(commit_list)
     purpose_metrics = purpose_metrics_extraction(commit_list)
-    history=history_dimention_metrics_extraction(commit_list)
-    exp =experiance_metrics_extraction(commit_list)
-    print(exp)
-    print(history)
-    print(diffusion_metrics)
-    print(size_metrics)
-    print(purpose_metrics)
+    history = history_dimention_metrics_extraction(commit_list)
+    exp = experiance_metrics_extraction(commit_list)
+    extracted_list = []
+    for i in range(len(purpose_metrics)):
+        dictionary = {}
+        dictionary.update(diffusion_metrics[i])
+        dictionary.update(size_metrics[i])
+        dictionary.update(purpose_metrics[i])
+        dictionary.update(history[i])
+        dictionary.update(exp[i])
+        extracted_list.append(dictionary)
 
+    print(extracted_list)
 
 
 if __name__ == "__main__":
