@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>result</title>
+</head>
+<body>
+<!--<table>-->
+    {%for commit in features%}
+<!--        <tr>-->
+<!--            <td>{{commit.commit}}</td>-->
+<!--            <td>{{commit.ns}}</td>-->
+<!--            <td>{{commit.nm}}</td>-->
+<!--            <td>{{commit.entropy}}</td>-->
+<!--            <td>{{commit.ndev}}</td>-->
+<!--            <td>{{commit.fix}}</td>-->
+<!--            <td>{{commit.exp}}</td>-->
+<!--            <td>{{commit.pd}}</td>-->
+<!--        </tr>-->
+    <h1>{{commit.commit}}</h1>
+    <h1>{{commit.prob}}</h1>
+    {%endfor%}
+<!--</table>-->
+</body>
+</html>
