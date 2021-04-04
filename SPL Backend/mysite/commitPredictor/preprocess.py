@@ -155,8 +155,9 @@ def diffusion_metrics_extraction(commit_list):
                 nd = 1
         entropy = 0
         for change_count in change_in_files:
-            file_bias = (change_count / all_line_modded)
-            entropy = -file_bias * math.log(file_bias, 2) + entropy
+            if(change_count !=0 ):
+                file_bias = (change_count / all_line_modded)
+                entropy = -file_bias * math.log(file_bias, 2) + entropy
 
         diffusion_list_to_return.append(
             {'commit': commit.hexsha, 'ns': nd, 'nm': ns, 'nf': nf, 'entropy': entropy})
@@ -269,7 +270,13 @@ class Preprocess(object):
         self.repository_name = self.repository_name + urls[-1]+'/'
         if(os.path.isdir(self.repository_name) != True):
             Repo.clone_from(self.url, self.repository_name)
-        
+            # try:
+            #     Repo.clone_from(self.url, self.repository_name)
+            # except git.NoSuchPathError:
+            #     print(self.url,"does not exist")
+            #     return git.NoSuchPathError
+
+
 
     def process(self):
         repo = git.Repo(self.repository_name)

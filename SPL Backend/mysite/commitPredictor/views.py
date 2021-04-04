@@ -29,7 +29,6 @@ def get_details(request):
     process.process()
     df = process.get_features()
     print(df)
-    df
     pre = Predict(df)
     prob = pre.return_predict()
     com = list(df.index)

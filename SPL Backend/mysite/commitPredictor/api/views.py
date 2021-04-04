@@ -28,8 +28,17 @@ def get_probability(request):
     repo_name = request.GET['name']
     features = []
     process = Preprocess(repo_name)
-    process.clone()
-    process.process()
+    # err = process.clone()
+    # print(err)
+    # if(err):
+    #     return JsonResponse(err)
+    try:
+        process.clone()
+        process.process()
+    except Exception as e:
+        print('exception',e)
+        return HttpResponse(status=400)
+
     df = process.get_features()
     pre = Predict(df)
     prob = pre.return_predict()
@@ -53,11 +62,8 @@ def get_features(request):
     id = int(request.GET['id'])
     df = pd.read_csv('../../preprocessed_data.csv')
     # com = list(df.index)
-    print(id)
-    print(df)
     df0 = df.iloc[id]
     print(df0)
     details = {'commit': df0['commit'], 'nd': df0['ns'],'ns': df0['nm'],'nf': df0['nf'],'entropy': df0['entropy'],'la': df0['la'],'ld': df0['ld'],'lt': df0['lt'],'fix': df0['fix'],'ndev': df0['ndev'],'nuc': df0['pd'],'age': df0['npt'],'exp': df0['exp'],'rexp': df0['rexp'],'sexp': df0['sexp']}
     reuslts = CommitDetail(details, many=False).data
-    print("reuslts", reuslts)
     return Response(reuslts)
